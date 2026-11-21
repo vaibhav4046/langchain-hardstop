@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy
+      - name: Unit tests (fake vault, scripted model)
+        run: uv run pytest -v -m "not integration"
+      - name: Integration test (real HARDSTOP MCP server, demo mode)
+        run: uv run pytest -v -m integration
+      - name: Example agent (offline, scripted model)
+        run: uv run python examples/guarded_payment_agent.py
+      - run: uv build
