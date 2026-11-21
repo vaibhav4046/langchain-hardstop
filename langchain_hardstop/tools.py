@@ -48,6 +48,7 @@ class HardstopTool(BaseTool):
     client: Any = Field(exclude=True, description="A HardstopCaller, usually a connected HardstopClient.")
     response_format: Literal["content", "content_and_artifact"] = "content_and_artifact"
     handle_tool_error: bool = True
+    handle_validation_error: bool = True
 
     def _run(self, *args: Any, **kwargs: Any) -> tuple[str, dict[str, Any]]:
         raise NotImplementedError(f"{self.name} is async only; call it with `ainvoke`.")

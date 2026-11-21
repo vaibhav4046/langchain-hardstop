@@ -73,7 +73,7 @@ against the Gemini API (no key was available when this was built).
 from langgraph.graph import END, START, MessagesState, StateGraph
 from langchain_hardstop import HardstopClient, create_hardstop_guard, hardstop_tools
 
-async with HardstopClient.demo() as client:          # or HardstopClient.from_env(os.environ)
+async with HardstopClient.demo() as client:  # or HardstopClient.from_env(os.environ)
     tools = hardstop_tools(client)
     model = my_chat_model.bind_tools(tools)
 
@@ -82,7 +82,7 @@ async with HardstopClient.demo() as client:          # or HardstopClient.from_en
 
     graph = StateGraph(MessagesState)
     graph.add_node("agent", agent)
-    graph.add_node("tools", create_hardstop_guard(tools, client))   # instead of ToolNode(tools)
+    graph.add_node("tools", create_hardstop_guard(tools, client))  # instead of ToolNode(tools)
     graph.add_edge(START, "agent")
     graph.add_conditional_edges("agent", lambda s: "tools" if s["messages"][-1].tool_calls else END)
     graph.add_edge("tools", "agent")
@@ -115,14 +115,18 @@ for what each one means.
   process for each call (observed by the HARDSTOP project with v0.3.2). That loses the server's
   one-payment-at-a-time rule and its duplicate-payment check, and in demo mode gives each call a fresh
   vault. `HardstopClient` keeps one process for its `async with` block.
-- **Why not just `ToolNode`?** LangGraph's `ToolNode` runs every tool call in the latest AI message, so
-  a node placed before it cannot stop one call without rewriting the AI message. The guard is the
-  executor instead.
+- **Why a node and not a separate pre-check?** LangGraph's `ToolNode` runs every tool call in the latest
+  AI message, so a node placed *before* it cannot stop one call without rewriting the AI message. The
+  guard is the executor instead. (`ToolNode` also accepts `awrap_tool_call`, which could host the same
+  check; `check_payment` is exposed for that.)
+- **Bad arguments do not crash the graph.** Arguments that fail a tool's schema, and any exception a
+  tool raises, come back to the model as an error `ToolMessage`. A pay call is validated with the pay
+  tool's schema before it is previewed, so the preview sees what would be sent.
 
 ## Tests
 
 ```bash
-uv run pytest -m "not integration"   # 12 tests: fake in-process vault, scripted model, no network
+uv run pytest -m "not integration"   # 14 tests: fake in-process vault, scripted model, no network
 uv run pytest -m integration          # 1 test: the real HARDSTOP MCP server in demo mode (needs npx)
 uv run ruff check . && uv run mypy    # mypy --strict on the package
 ```

@@ -132,3 +132,23 @@ async def test_agent_loop_end_to_end_with_scripted_model() -> None:
     assert result["messages"][-1].content == "Paid $4; $15 was blocked."
     assert vault.spent == 4
     assert vault.names() == ["hardstop_preview_payment", "hardstop_pay", "hardstop_preview_payment"]
+
+
+async def test_invalid_pay_arguments_are_blocked_not_raised() -> None:
+    vault = FakeVault()
+    [msg] = await run_guard(vault, call("hardstop_pay", "v", to=RECIPIENT, amount_usd=1, repeat="notbool"))
+    assert msg.status == "error" and "invalid" in str(msg.content)
+    assert vault.calls == []
+
+
+async def test_invalid_arguments_and_tool_exceptions_become_error_messages() -> None:
+    class Exploding(FakeVault):
+        async def call(self, name: str, arguments: Any = None) -> HardstopResult:
+            if name == "hardstop_status":
+                raise ConnectionError("pipe closed")
+            return await super().call(name, arguments)
+
+    vault = Exploding()
+    bad, boom = await run_guard(vault, call("hardstop_request_more", "r", reason=""), call("hardstop_status", "s"))
+    assert bad.status == "error" and bad.tool_call_id == "r"
+    assert boom.status == "error" and "ConnectionError" in str(boom.content)
