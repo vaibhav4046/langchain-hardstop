@@ -1,18 +1,15 @@
 """End-to-end demo: a LangGraph agent pays through HARDSTOP, and the guard stops a payment over the limit.
 
-    python examples/guarded_payment_agent.py                 # offline: scripted model, demo vault
-    python examples/guarded_payment_agent.py --model gemini  # needs GOOGLE_API_KEY and the [gemini] extra
+    python examples/guarded_payment_agent.py   # offline: scripted model, demo vault
 
-Both modes start the real HARDSTOP MCP server in demo mode (`npx -y github:vaibhav4046/hardstop --demo`):
+This starts the real HARDSTOP MCP server in demo mode (`npx -y github:vaibhav4046/hardstop --demo`):
 an in-memory vault with $10 per payment, $20 a day and one recipient, "Cloud hosting". Nothing is real.
 """
 
 from __future__ import annotations
 
-import argparse
 import asyncio
 
-from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
 from langchain_hardstop import HardstopClient, create_guarded_agent, hardstop_tools
@@ -51,12 +48,6 @@ def scripted_model() -> ScriptedChatModel:
     )
 
 
-def gemini_model() -> BaseChatModel:
-    from langchain_google_genai import ChatGoogleGenerativeAI  # optional extra
-
-    return ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
-
-
 def show(message: object) -> None:
     if isinstance(message, AIMessage):
         for call in message.tool_calls:
@@ -69,8 +60,8 @@ def show(message: object) -> None:
         print(f"{status:7}: {message.name}: {first_line}")
 
 
-async def main(model_name: str) -> None:
-    model = gemini_model() if model_name == "gemini" else scripted_model()
+async def main() -> None:
+    model = scripted_model()
     async with HardstopClient.demo() as client:
         agent = create_guarded_agent(model, hardstop_tools(client), client)
         result = await agent.ainvoke({"messages": [HumanMessage(TASK)]})
@@ -81,6 +72,4 @@ async def main(model_name: str) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--model", choices=["scripted", "gemini"], default="scripted")
-    asyncio.run(main(parser.parse_args().model))
+    asyncio.run(main())

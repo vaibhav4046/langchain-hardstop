@@ -62,10 +62,8 @@ Vault after the run: spent $4.00 today.
 The tool results, the refusal reason and the final balance come from the HARDSTOP server; only the
 model's choices are scripted.
 
-With a real model: `pip install "langchain-hardstop[gemini]"`, set `GOOGLE_API_KEY`, then
-`python examples/guarded_payment_agent.py --model gemini`. Checked so far: with
-`langchain-google-genai` 4.5.2 the model constructs and binds all five tools. It has **not** been run
-against the Gemini API (no key was available when this was built).
+The example uses a scripted model. No hosted model has been run against this package; any chat model
+that supports tool calling can be passed to `create_guarded_agent`, but that is untested here.
 
 ## Use it in your own graph
 
